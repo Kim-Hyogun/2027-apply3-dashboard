@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.claude/
+.gemini/
+*temp.pdf
+inspect_output.txt
+compare_days.txt
+input_headers.txt
