@@ -247,7 +247,7 @@ target_total_final = target_in_quota_final + target_out_quota_final  # Guarantee
 
 # Header
 st.markdown(f"<div class='dashboard-title'>2027학년도 신입생 정시 모집 지원현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div class='dashboard-subtitle'>📊 {date_header} (실시간 집계 결과)</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='dashboard-subtitle'>📊 {date_header} (실시간 집계 결과) | [정시 모집 기간: 2027.01.04(월) ~ 2027.01.20(수) (총 17일간)]</div>", unsafe_allow_html=True)
 
 # 3. Metric Cards (Summary statistics)
 col1, col2, col3, col4 = st.columns(4)
