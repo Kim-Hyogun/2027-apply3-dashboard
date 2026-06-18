@@ -38,6 +38,12 @@ def convert_excel_to_image(excel_path, output_png_path):
         ws.PageSetup.FitToPagesWide = 1
         ws.PageSetup.FitToPagesTall = 1
         
+        # Set minimal margins (0.1 inches) to reduce initial blank margins
+        ws.PageSetup.LeftMargin = excel.InchesToPoints(0.1)
+        ws.PageSetup.RightMargin = excel.InchesToPoints(0.1)
+        ws.PageSetup.TopMargin = excel.InchesToPoints(0.1)
+        ws.PageSetup.BottomMargin = excel.InchesToPoints(0.1)
+        
         # Export as PDF (0 represents xlTypePDF)
         print(f"[excel_to_image] Exporting temporary PDF to: {temp_pdf_path}")
         ws.ExportAsFixedFormat(0, temp_pdf_path)
@@ -62,16 +68,54 @@ def convert_excel_to_image(excel_path, output_png_path):
             except:
                 pass
                 
-    # Convert PDF to PNG via PyMuPDF (fitz) at 300 DPI
+    # Convert PDF to PNG via PyMuPDF (fitz) at 300 DPI, cropping empty margin space
     try:
         if not os.path.exists(temp_pdf_path):
             raise FileNotFoundError(f"Temporary PDF file was not created: {temp_pdf_path}")
             
-        print(f"[excel_to_image] Rendering first page of PDF at 300 DPI...")
+        print(f"[excel_to_image] Reading PDF and calculating content bounding box for tight cropping...")
         doc = fitz.open(temp_pdf_path)
         page = doc[0]  # First page
         
-        # 300 DPI zoom factor is 300 / 72 = 4.16666667
+        # Compute bounding box of content (text and drawing paths like table borders)
+        x0, y0, x1, y1 = float('inf'), float('inf'), float('-inf'), float('-inf')
+        
+        # 1. Bounding box from text blocks
+        blocks = page.get_text("blocks")
+        for b in blocks:
+            x0 = min(x0, b[0])
+            y0 = min(y0, b[1])
+            x1 = max(x1, b[2])
+            y1 = max(y1, b[3])
+            
+        # 2. Bounding box from drawings (lines, cells, borders)
+        drawings = page.get_drawings()
+        for d in drawings:
+            rect = d.get("rect")
+            if rect:
+                # Exclude shapes that cover the entire page (like background color fills)
+                if rect.width < page.rect.width * 0.99 or rect.height < page.rect.height * 0.99:
+                    x0 = min(x0, rect[0])
+                    y0 = min(y0, rect[1])
+                    x1 = max(x1, rect[2])
+                    y1 = max(y1, rect[3])
+                    
+        # Apply crop box if content is found, else render whole page
+        if x0 != float('inf'):
+            # Add a small padding (5 points) to avoid clipping text borders
+            padding = 5
+            cropped_rect = fitz.Rect(
+                max(0, x0 - padding),
+                max(0, y0 - padding),
+                min(page.rect.width, x1 + padding),
+                min(page.rect.height, y1 + padding)
+            )
+            print(f"[excel_to_image] Cropping page to content bounding box: {cropped_rect}")
+            page.set_cropbox(cropped_rect)
+        else:
+            print("[excel_to_image] Warning: No content found, rendering full page.")
+            
+        # Render page at 300 DPI (zoom factor is 300 / 72)
         zoom = 300 / 72
         mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat)
@@ -79,7 +123,7 @@ def convert_excel_to_image(excel_path, output_png_path):
         # Save image
         pix.save(output_png_path)
         doc.close()
-        print(f"[excel_to_image] Image successfully generated: {output_png_path}")
+        print(f"[excel_to_image] Cropped image successfully generated: {output_png_path}")
     except Exception as e:
         print(f"[excel_to_image] PDF to PNG conversion failed: {e}")
         raise e
