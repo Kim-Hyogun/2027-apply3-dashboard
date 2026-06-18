@@ -483,7 +483,7 @@ with tab3:
             else:
                 st.info("하락한 학과가 없습니다.")
         with col_tab3_2:
-            st.dataframe(df_dec_display, height=table_height, use_container_width=True)
+            st.dataframe(df_dec_display, height=table_height, use_container_width=True, hide_index=True)
     else:
         st.info("정원내 지원인원이 전년 당일 대비 하락한 학과가 없습니다.")
 
@@ -561,7 +561,8 @@ dynamic_height = (len(df_final_table) + 1) * 35 + 20
 st.dataframe(
     df_final_table,
     height=dynamic_height,
-    use_container_width=True
+    use_container_width=True,
+    hide_index=True
 )
 
 st.markdown("<br><hr>", unsafe_allow_html=True)
